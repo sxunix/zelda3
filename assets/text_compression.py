@@ -191,7 +191,10 @@ def new_encoder(cmd, param):
     r = info[1][param]
     return (info[0], r) if r != None else ()
 
-kEncoders = {'org' : org_encoder, 'new' : new_encoder}
+def cn_encoder(cmd, param):
+  return new_encoder(cmd, param)
+
+kEncoders = {'org' : org_encoder, 'new' : new_encoder, 'cn' : cn_encoder}
 
 
 class LangUS:
@@ -388,6 +391,24 @@ class LangFR_C(LangEU):
   dictionary = kTextDictionary_FR
   rom_addrs = [0x9c8000, 0x8CF150]
 
+class LangCN(LangUS):
+  # Chinese alphabet: US chars (0x00-0x5F) + CN punctuation (0x60-0x6F)
+  alphabet = kTextAlphabet_US + [
+    "，", "。", "！", "？", "…", "：", "、", "—", "（", "）", "《", "》", "\u201c", "\u201d", "\u2018", "\u2019",
+  ]
+  # 1118 unique CJK characters from dialogue_cn.txt, sorted by Unicode codepoint
+  cjk_chars = list(
+    '一七万三上下不与专且世东丢两个中丰临为主丽举久么义之乎乐也书买乱了予争事于亏互井亚些亡交产亮亲人什仇今仍从仔他付代令以们件价任份仿企伏伐休众优伙会伟传伤伴伸似但位住佐体何佛作你使供侬便保信倒候借值假做停健偷储像儿允充先光克免兔入全公六共关兴兵其具兹内再冒冰冲冷冻准减凝几凭凶出击刃分切划列则创利别刮到制刺刻前剑剧剩副劈力办功加务动助励劲劳势勇勉勾匙匠升午半单卖南卜占卡卢卦卫印危即厄厅历厚原去又及友双反发取受变口古另叨只叫召可右吃各合吉吊同名后向吗吞否吧听启吱吵吸吹呀呃告员呢呣周呱呼命和咒咔咕咳咻品哇哈响哟哥哦哪哼唠唤唯商啊啦喂喜喝嗝嗯嘛嘟嘿噜器噬囚四回因团围国图土圣在地场坏块坚坠坦型埋城堂堡塔塘塞墓墙增壁士声处备复外多够大天太夫失头夺奇奏奖套女她好如姆始姿婆子字存孙学孩它守安完官定宜宝实宠客室宫害家容寄密寒对寻封射将小少尔尝就尼尽局层居展属山岩巢工左巧巨差己已布师希带帮常干平年并幸广庄庆应底店座庭康建开弃弄式弓引弟张弥弱弹强当形影彻往征待很徊律得徘御德徽心必忘忙快怀态怎怕思怪总恐恢恭息恶情惊惑惜惠惫想惹意感愧愿慧慰憾懂懦戏成我或战房所扇手才打扔托扛扭扯扰找承技把抓投抚抢护报抱抵担拉拔拖招拜拥择拯拾拿持指按挑挖挡挥捕换捣据掉掘探接控推掩掷描提揭搜搞搬携摧摸撞擅操攀攒支收改攻放故敌救教敢散数整文斗料断斯新方旁旅旋族无既旧早时明易映是晕晚晨普晶智暖暗暴曦曲更曾替最月有朋服望期木未本机杀杆村杖束条来松林枚果枝架某查标树样根格桩梭棋棒森棵楼概模横次欢欲欺歉止正此步武死殿毁每比毛氏民气水永求池汪沉沙没河治沼沿泉泊法注泰泽洒洞活派流浪海消涌涡深混清游湖湛滚满漆漠漩漫潜澈激瀑灌火灭灯灵灾炎炸点炼烂烈烦热焰然照熬燃爆爪爱父爽片牌牢物牵特犯狂独猩献猴王玛玩环现珍珠球理瓦瓶甚甜生用由甲界留疑疲病痛登白百的皮益盖盗盛目直相盼盾看真眠眩眼着睛睡瞄瞌矗知石砍破砸确碍碎碑示礼祈祝神祭祷禁福离种科秒秘积称移稀稍穆穴空穿突窝立站竟章笛第笼等答策简算管箭箱篷类粉精糊糟系索紧繁红约级纪纳纵线细终经绑结绕给绝统继绩续绿缉缩缺罐网罩罪置美群老者而耗聊联聚肉股肯胖胜能脉脚脸腿臂自至致舒舞色节花英荡荣药获莽菇萨落蒙蓄蓝蔽蕴藏蘑虫蛋蛰蜂蜜血行衣表被裂装裔西要见观视觉角解触言计认让议记讲讶许论设访证识诉试诚话该语误说请诺读谁调谋谎谓谢负贤败贪购贵费贼资赏赐赚赢赫走赶起趁越趣足跑跟路跳踢蹦蹼身躲轻辈辉输边达过迎运近还这进远连述迷追退送逃选途通逛逝造遇遍道遗遭避那邦邪部都配酷释里重量金针钥钩钱铁铠铲银铺链锁错锤键锻镖镜长门闪闭问闯闲间闻阴阵阿附陈降院除险陪陶随隐难雄集雨雾需震非靠面靴音顶顺须顾预领颗题颜风飞饰香马驱骑骗骚骨骷髅高鬼魂魔鱼鲁鸟麻黄黑鼾齐龟'
+  )
+  dictionary = []
+  rom_addrs = [0x9c8000, 0x8edf40]
+  ESCAPE_CHARACTER = None
+  encoder = 'cn'
+
+  def __init__(self):
+    assert len(self.alphabet) == 111, f'Expected 111, got {len(self.alphabet)}'
+    assert len(self.cjk_chars) == 1118
+
 kLanguages = {
   'us' : LangUS(),
   'de' : LangDE(),
@@ -400,14 +421,15 @@ kLanguages = {
   'redux' : LangUS(),
   'nl' : LangNL(),
   'sv' : LangSV(),
+  'cn' : LangCN(),
 }
 
 def dialogue_filename(s):
   if s == 'us': return 'dialogue.txt'
   return f"dialogue_{s.replace('-', '_')}.txt"
 
-def uses_new_format(lang): 
-  return kLanguages[lang].encoder == 'new'
+def uses_new_format(lang):
+  return kLanguages[lang].encoder in ('new', 'cn')
 
 dict_expansion = []
 
@@ -496,13 +518,27 @@ def compress_strings(xs, lang = 'us'):
     rev.setdefault(b[0], {})[b] = a
   #rev = {b:a for a,b in enumerate(info.dictionary)}
   a2i = {e:i for i,e in enumerate(info.alphabet)}
+
+  # For Chinese, build a CJK char lookup
+  cjk2i = {}
+  if hasattr(info, 'cjk_chars'):
+    cjk2i = {ch: idx for idx, ch in enumerate(info.cjk_chars)}
+
   def compress_string(s):
     i = 0
     r = bytearray()
     while i < len(s):
-      what, num = encode_greedy_from_dict(s, i, rev, a2i, info)
-      r.extend(what)
-      i += num
+      # Check for CJK character first (Chinese mode)
+      if cjk2i and s[i] in cjk2i:
+        idx = cjk2i[s[i]]
+        esc_base = len(info.alphabet)  # First escape prefix byte
+        prefix = esc_base + (idx >> 8)
+        r.extend([prefix, idx & 0xff])
+        i += 1
+      else:
+        what, num = encode_greedy_from_dict(s, i, rev, a2i, info)
+        r.extend(what)
+        i += num
     return r
   return [compress_string(x) for x in xs]
   

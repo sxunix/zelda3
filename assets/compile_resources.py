@@ -69,7 +69,9 @@ def print_map32_to_map16():
 def compress_dialogue(fname, lang):
   lines = []
   for line in open(fname, encoding='utf8').read().splitlines():
-    a, b = line.split(': ', 1)
+    idx = line.index(':')
+    b = line[idx+1:]
+    if b.startswith(' '): b = b[1:]
     lines.append(b)
   return text_compression.compress_strings(lines, lang)
 
@@ -140,6 +142,7 @@ def print_dialogue(args):
     all_fonts.append(pack_arrays([font_data, font_width]))
     flags = text_compression.uses_new_format(lang)
     if i != 0: flags |= 2 # no us rom match?
+    if lang == 'cn': flags |= 4  # Chinese mode: 16x16 CJK rendering
     mappings.append(pack_arrays([lang.encode('utf8'), bytearray([i, i, flags])]))
   add_asset_packed('kDialogue', all_langs)
   add_asset_packed('kDialogueFont', all_fonts)

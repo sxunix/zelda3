@@ -37,12 +37,14 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   of a homebrew executable (.nro). This is intended to be used for sysmodules.
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
-SRC_DIR     := ../..
+ROOT_DIR    := ../../..
+ABS_ROOT    ?= $(abspath $(ROOT_DIR))
+SRC_DIR     := $(ROOT_DIR)/src
 TARGET		:=	zelda3
 BUILD		:=	bin
-SOURCES		:=  $(SRC_DIR) $(SRC_DIR)/snes $(SRC_DIR)/third_party/gl_core $(SRC_DIR)/third_party/opus-1.3.1-stripped
+SOURCES		:=  $(SRC_DIR) $(ROOT_DIR)/snes $(ROOT_DIR)/third_party/gl_core $(ROOT_DIR)/third_party/opus-1.3.1-stripped
 
-CFILES := $(wildcard $(SRC_DIR)/*.c $(SRC_DIR)/snes/*.c) $(SRC_DIR)/third_party/gl_core/gl_core_3_1.c $(SRC_DIR)/third_party/opus-1.3.1-stripped/opus_decoder_amalgam.c
+CFILES := $(wildcard $(SRC_DIR)/*.c $(ROOT_DIR)/snes/*.c) $(ROOT_DIR)/third_party/gl_core/gl_core_3_1.c $(ROOT_DIR)/third_party/opus-1.3.1-stripped/opus_decoder_amalgam.c
 
 INCLUDES	:=	include
 APP_TITLE   :=  The Legend of Zelda: A Link to the Past
@@ -57,7 +59,7 @@ ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 CFLAGS	:=	-g -Wall -O2 -ffunction-sections -Wno-parentheses \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	-D__SWITCH__ $(INCLUDE) -DSTBI_NO_THREAD_LOCALS `sdl2-config --cflags`
+CFLAGS	+=	-D__SWITCH__ $(INCLUDE) -I$(ABS_ROOT) -DSTBI_NO_THREAD_LOCALS `sdl2-config --cflags`
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions
 CFLAGS += -std=gnu11
@@ -82,6 +84,7 @@ ifneq ($(BUILD),$(notdir $(CURDIR)))
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
 export TOPDIR	:=	$(CURDIR)
+export ABS_ROOT
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 			$(foreach dir,$(DATA),$(CURDIR)/$(dir)) \

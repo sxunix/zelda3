@@ -157,6 +157,7 @@ kFontTypes = {
   'redux': (0x8e8000, 256, 'font_redux.png', (0x8ECADF, 99)),
   'nl': (0x8e8000, 256, 'font_nl.png', (0x8ECADF, 99)),
   'sv': (0x8e8000, 256, 'font_sv.png', (0x8ECADF, 99)),
+  'cn': (0x8e8000, 256, 'font_cn.png', (0x8ECADF, 112)),
 }
 
 def decode_font():
@@ -198,16 +199,19 @@ def decode_font():
   if lang != 'pt':
     assert (data, W) == encode_font_from_png(lang)
 
+def encode_one_spr_2bit_generic(data, offs, target, toffs, pitch):
+  for y in range(8):
+    d0, d1 = 0, 0
+    for x in range(8):
+      pixel = data[offs + y * pitch + 7 - x]
+      d0 |= (pixel & 1) << x
+      d1 |= ((pixel >> 1) & 1) << x
+    target[toffs + y * 2 + 0], target[toffs + y * 2 + 1] = d0, d1
+
 def encode_font_from_png(lang):
+  if lang == 'cn':
+    return encode_font_cn()
   font_data = Image.open(kFontTypes[lang][2]).tobytes()
-  def encode_one_spr_2bit(data, offs, target, toffs, pitch):
-    for y in range(8):
-      d0, d1 = 0, 0
-      for x in range(8):
-        pixel = data[offs + y * pitch + 7 - x]
-        d0 |= (pixel & 1) << x
-        d1 |= ((pixel >> 1) & 1) << x
-      target[toffs + y * 2 + 0], target[toffs + y * 2 + 1] = d0, d1
   w = 128 + 15
   dst = bytearray(256 * 16)
   def get_width(base_offs):
@@ -221,9 +225,116 @@ def encode_font_from_png(lang):
     base_offs = x * 9 + (y * 8 + (y >> 1)) * w
     if (y & 1) == 0:
       W.append(get_width(base_offs))
-    encode_one_spr_2bit(font_data, base_offs + w, dst, i * 16, w)
+    encode_one_spr_2bit_generic(font_data, base_offs + w, dst, i * 16, w)
   chars_per_lang = kFontTypes[lang][3][1]
   return dst, W[:chars_per_lang]
+
+def encode_font_cn():
+  """Encode Chinese font data.
+
+  Returns (font_data, width_table) where:
+  - font_data: US 8x16 font (4096B) + CJK 16x16 font (1118 * 64B)
+  - width_table: 112 standard widths + 1118 CJK widths
+
+  The CJK section stores each 16x16 char as 4 tiles in 2BPP format:
+  TL (16B), TR (16B), BL (16B), BR (16B) = 64B per character.
+  """
+  # Get US font data for characters 0-95 (standard Latin/symbols)
+  us_font_data, us_widths = encode_font_from_png.__wrapped__('us') if hasattr(encode_font_from_png, '__wrapped__') else _encode_us_font()
+
+  # Start with a copy of US font tiles (256 tiles * 16 bytes = 4096 bytes)
+  std_font = bytearray(us_font_data)
+
+  # Load CN font image (16x16 grid: 16 punct + 1118 CJK chars)
+  cn_font_img = Image.open('../tables/font_cn.png').tobytes()
+  cn_img_w = 32 * 16  # 512 pixels wide
+
+  # Render CN punctuation (positions 96-111) into standard font tiles
+  # These are 16x16 in the image but we render them as 8x16 (left half only, or scaled)
+  # Actually, punctuation is typically narrow, so we use the left 8 pixels of each 16x16 cell
+  cn_widths = bytearray()
+
+  # First, copy US widths for chars 0-94
+  width_table = bytearray(us_widths[:95])
+
+  # For CN punctuation (chars 95-110), render from font_cn.png
+  for i in range(16):
+    char_col = i % 32
+    char_row = i // 32
+    src_x = char_col * 16
+    src_y = char_row * 16
+
+    # Determine tile index in the 256-tile font: use r10 = (c & 0x70)*2 + (c & 0xf)
+    c = 95 + i
+    r10 = (c & 0x70) * 2 + (c & 0xf)
+
+    # Encode top-left 8x8 into tile at r10
+    encode_one_spr_2bit_generic(cn_font_img, src_y * cn_img_w + src_x, std_font, r10 * 16, cn_img_w)
+    # Encode bottom-left 8x8 into tile at r10+16
+    encode_one_spr_2bit_generic(cn_font_img, (src_y + 8) * cn_img_w + src_x, std_font, (r10 + 16) * 16, cn_img_w)
+
+    # Width: measure the rightmost non-zero pixel in left 8 columns
+    w = 8  # default width for punctuation
+    for px_x in range(7, -1, -1):
+      found = False
+      for py in range(16):
+        if cn_font_img[(src_y + py) * cn_img_w + src_x + px_x] != 0:
+          found = True
+          break
+      if found:
+        w = px_x + 2  # +1 for the pixel, +1 for spacing
+        break
+    width_table.append(min(w, 8))
+
+  assert len(width_table) == 111, f'Expected 111, got {len(width_table)}'
+
+  # Now encode CJK characters (1118 chars) as 16x16 (4 tiles each)
+  cjk_font = bytearray()
+  for i in range(1118):
+    img_idx = 16 + i  # first 16 are punctuation in font_cn.png
+    char_col = img_idx % 32
+    char_row = img_idx // 32
+    src_x = char_col * 16
+    src_y = char_row * 16
+
+    # 4 tiles: TL(8x8), TR(8x8), BL(8x8), BR(8x8)
+    tile_data = bytearray(64)
+    encode_one_spr_2bit_generic(cn_font_img, src_y * cn_img_w + src_x, tile_data, 0, cn_img_w)          # TL
+    encode_one_spr_2bit_generic(cn_font_img, src_y * cn_img_w + src_x + 8, tile_data, 16, cn_img_w)     # TR
+    encode_one_spr_2bit_generic(cn_font_img, (src_y + 8) * cn_img_w + src_x, tile_data, 32, cn_img_w)   # BL
+    encode_one_spr_2bit_generic(cn_font_img, (src_y + 8) * cn_img_w + src_x + 8, tile_data, 48, cn_img_w) # BR
+    cjk_font.extend(tile_data)
+
+    # Width: 16 for most CJK, but measure actual width
+    max_x = 0
+    for py in range(16):
+      for px_x in range(15, -1, -1):
+        if cn_font_img[(src_y + py) * cn_img_w + src_x + px_x] != 0:
+          max_x = max(max_x, px_x)
+          break
+    width_table.append(min(max_x + 2, 13))  # +1 pixel, +1 spacing, cap at 13 to fit 12 chars/line
+
+  font_data = std_font + cjk_font
+  return font_data, width_table
+
+def _encode_us_font():
+  """Encode the US font without going through the lang dispatch."""
+  font_data = Image.open(kFontTypes['us'][2]).tobytes()
+  w = 128 + 15
+  dst = bytearray(256 * 16)
+  def get_width(base_offs):
+    for i in range(8):
+      if font_data[base_offs + i] == 255:
+        break
+    return i + 1
+  W = bytearray()
+  for i in range(256):
+    x, y = i % 16, i // 16
+    base_offs = x * 9 + (y * 8 + (y >> 1)) * w
+    if (y & 1) == 0:
+      W.append(get_width(base_offs))
+    encode_one_spr_2bit_generic(font_data, base_offs + w, dst, i * 16, w)
+  return dst, W[:99]
 
 # Returns the dungeon palette for the specified palette index
 # 0 = lightworld, 1 = darkworld, 2 = dungeon
