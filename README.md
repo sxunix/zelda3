@@ -16,6 +16,21 @@ Additionally, it can be configured to also run the original machine code side by
 
 I got much assistance from spannerism's Zelda 3 JP disassembly and the other ones that documented loads of function names and variables.
 
+## Chinese Language Support
+
+This fork adds complete Chinese (Simplified) language support. See [README_CN.md](README_CN.md) for details in Chinese.
+
+- 397 fully translated dialogue lines
+- Pixel-perfect CJK font using [Ark Pixel](https://github.com/TakWolf/ark-pixel-font) 12px (SIL OFL)
+- Blue outline + white body text, matching original US font style
+- Supports Mac and Nintendo Switch
+
+To play in Chinese:
+1. Run `python3 tools/generate_font_cn.py` to generate the font
+2. Run `cd assets && python3 restool.py --extract-from-rom --languages cn`
+3. Build with `make`
+4. Set `Language = cn` in `zelda3.ini`
+
 ## Additional features
 
 A bunch of features have been added that are not supported by the original game. Some of them are:
